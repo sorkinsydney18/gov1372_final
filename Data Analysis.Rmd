@@ -17,9 +17,43 @@ nationscape <- load("nationscape_cleaned.RData")
 
 ```{r, merge data}
 
+cleaned_merged <- full_join(combined_final, cdc_cleaned, by = "date")
+
+save(cleaned_merged, file = "cleaned_merged.RData")
+```
+
+
+
+
+```{r}
+
+analysis <- cleaned_merged %>%
+  #COVID concern variable; concerned if responded 1 or 2
+  
+  mutate(COVID_concern = ifelse(extra_corona_concern == 1 | extra_corona_concern == 2, 1, 0)) %>% 
+  group_by(date) %>% 
+  mutate(prop_concerned_daily = sum(COVID_concern, na.rm = TRUE)/n())
+  
+  
+  #partisan difference
+  analysis %>% 
+    ungroup() %>% 
+  group_by(pid3) %>% 
+  summarise(partisan_concern = sum(COVID_concern, na.rm = TRUE)/n())
+
+
+#proportion of respondents concerned about COVID over time
+analysis %>% 
+  ggplot(aes(x = date, y = prop_concerned_daily)) +
+  geom_line()
+  
+
+
+  
+
+
 
 
 ```
-
 
 
