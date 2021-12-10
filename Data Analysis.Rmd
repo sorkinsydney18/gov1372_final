@@ -1,0 +1,25 @@
+---
+title: "Data Analysis"
+author: "Sydney Sorkin"
+date: "12/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+
+cdc_data <- load("cdc_cleaned.RData")
+
+nationscape <- load("nationscape_cleaned.RData")
+```
+
+```{r, merge data}
+
+
+
+```
+
+
+

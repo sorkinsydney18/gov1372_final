@@ -153,3 +153,5 @@ combined12 <- rbind(combined11, nationscape_06.11.20)
 combined13 <- rbind(combined12, nationscape_06.18.20)
 
 combined_final <- rbind(combined13, nationscape_06.25.20)
+
+save(combined_final, file = "nationscape_cleaned.RData")

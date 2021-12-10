@@ -10,7 +10,7 @@ cdc_cleaned <- cdc_data %>%
   
   #filter for nationscape time period
   
-  filter(submission_date >= as.Date("2020-03-01") & submission_date <= as.Date("2020-07-01")) %>% 
+  filter(submission_date >= as.Date("2020-03-01") & submission_date <= as.Date("2020-07-02")) %>% 
   
   #clean health jurisdictions
   
