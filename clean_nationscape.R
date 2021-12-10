@@ -154,4 +154,15 @@ combined13 <- rbind(combined12, nationscape_06.18.20)
 
 combined_final <- rbind(combined13, nationscape_06.25.20)
 
+
+combined_final <- combined_final %>% 
+  mutate(date = as.Date(start_date, "%m/%d/%Y")) %>% 
+  select(date, response_id, 
+         pid3, pid7, strength_democrat, 
+         strength_republican, lean_independent, ideo5,
+         extra_corona_concern,
+         extra_sick_you,extra_sick_family, extra_sick_work, extra_sick_other)
+  
+
+
 save(combined_final, file = "nationscape_cleaned.RData")

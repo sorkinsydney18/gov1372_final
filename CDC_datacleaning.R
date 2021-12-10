@@ -6,11 +6,11 @@ cdc_data <- read_csv("United_States_COVID-19_Cases_and_Deaths_by_State_over_Time
 
 
 cdc_cleaned <- cdc_data %>% 
-  mutate(submission_date = as.Date(submission_date, "%m/%d/%Y")) %>% 
+  mutate(date = as.Date(submission_date, "%m/%d/%Y")) %>% 
   
   #filter for nationscape time period
   
-  filter(submission_date >= as.Date("2020-03-01") & submission_date <= as.Date("2020-07-02")) %>% 
+  filter(date >= as.Date("2020-03-19") & date <= as.Date("2020-07-02")) %>% 
   
   #clean health jurisdictions
   
@@ -19,14 +19,14 @@ cdc_cleaned <- cdc_data %>%
   
  
   #national outbreak numbers
-   group_by(submission_date) %>% 
+   group_by(date) %>% 
   
   mutate(US_tot_cases = sum(tot_cases),
          US_new_cases = sum(new_case),
          US_tot_death = sum(tot_death),
          US_new_death = sum(new_death))  %>%
   
-  select(submission_date, state, tot_cases, new_case, 
+  select(date, state, tot_cases, new_case, 
          US_tot_cases, US_new_cases, 
          tot_death, new_death, US_tot_death, US_new_death)
 
