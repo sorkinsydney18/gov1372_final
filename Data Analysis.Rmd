@@ -39,31 +39,41 @@ load("cleaned_merged.RData")
 ```{r}
 
 analysis <- cleaned_merged %>%
-  #COVID concern variable; concerned if responded 1 or 2
   
-  mutate(COVID_concern = ifelse(extra_corona_concern == 1 | extra_corona_concern == 2, 1, 0)) %>% 
+  #filtered for only Dems and Reps
+  filter(pid3 %in% c(1,2)) %>% 
+  mutate(dem_concern = ifelse(pid3 == 1, covid_concern, NA),
+         rep_concern = ifelse(pid3 == 2, covid_concern, NA)) %>% 
   group_by(date) %>% 
-  mutate(prop_concerned_daily = sum(COVID_concern, na.rm = TRUE)/n())
   
+  #measurement variable of covid concern
+  mutate(avg_concern = mean(covid_concern, na.rm = TRUE),
+         dem_avg_concern = mean(dem_concern, na.rm = TRUE),
+         rep_avg_concern = mean(rep_concern, na.rm = TRUE)) %>% 
   
-  #partisan difference
-  analysis %>% 
-    ungroup() %>% 
-  group_by(pid3) %>% 
-  summarise(partisan_concern = sum(COVID_concern, na.rm = TRUE)/n())
+  #measures daily difference in avg partisan concern
+  mutate(partisan_diff = dem_avg_concern - rep_avg_concern)
 
-
-#proportion of respondents concerned about COVID over time
 analysis %>% 
-  ggplot(aes(x = date, y = prop_concerned_daily)) +
+  ggplot(aes(x = US_tot_cases, y = partisan_diff)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+analysis %>% 
+  ggplot(aes(x = US_tot_cases, y = avg_concern)) +
   geom_line()
   
+
+analysis %>% 
+  ggplot(aes(x = date, y = partisan_diff)) +
+  geom_line()
 
 cdc_cleaned %>% 
   ggplot(aes(x = date, y = US_new_cases)) +
   geom_line()
   
 
+summary(lm(partisan_diff ~ US_tot_cases, data = analysis))
 
 
 
@@ -93,6 +103,12 @@ test %>%
   geom_line()
   
 
+
+
+```
+```{r, analysis of data composition}
+combined_final %>% 
+  count(pid3)
 
 
 ```
