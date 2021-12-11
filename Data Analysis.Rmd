@@ -17,11 +17,22 @@ nationscape <- load("nationscape_cleaned.RData")
 
 ```{r, merge data}
 
-cleaned_merged <- full_join(combined_final, cdc_cleaned, by = "date")
+cleaned_merged <- full_join(combined_final, cdc_cleaned, by = "date") %>% 
+  mutate(covid_concern = case_when(
+    extra_corona_concern == 1 ~ 4,
+    extra_corona_concern == 2 ~ 3,
+    extra_corona_concern == 3 ~ 2,
+    extra_corona_concern == 4 ~ 1))
 
 save(cleaned_merged, file = "cleaned_merged.RData")
 ```
 
+```{r, load merged data}
+
+
+load("cleaned_merged.RData")
+
+```
 
 
 
@@ -48,7 +59,9 @@ analysis %>%
   geom_line()
   
 
-
+cdc_cleaned %>% 
+  ggplot(aes(x = date, y = US_new_cases)) +
+  geom_line()
   
 
 
@@ -56,4 +69,31 @@ analysis %>%
 
 ```
 
+```{r, test run}
+
+test <- cleaned_merged %>%
+  filter(date >= "2020-03-19" & date <= "2020-04-01") %>% 
+  filter(pid3 %in% c(1,2)) %>% 
+  mutate(dem_concern = ifelse(pid3 == 1, covid_concern, NA),
+         rep_concern = ifelse(pid3 == 2, covid_concern, NA)) %>% 
+  group_by(date) %>% 
+  mutate(avg_concern = mean(covid_concern, na.rm = TRUE),
+         dem_avg_concern = mean(dem_concern, na.rm = TRUE),
+         rep_avg_concern = mean(rep_concern, na.rm = TRUE)) %>% 
+  mutate(partisan_diff = dem_avg_concern - rep_avg_concern)
+
+
+test %>% 
+  ggplot(aes(x = date, y = avg_concern, color =  as.factor(pid3))) +
+  geom_line()
+
+
+test %>% 
+  ggplot(aes(x = date, y = partisan_diff)) +
+  geom_line()
+  
+
+
+
+```
 
