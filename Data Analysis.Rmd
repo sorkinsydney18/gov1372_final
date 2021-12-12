@@ -42,6 +42,13 @@ analysis <- cleaned_merged %>%
   
   #filtered for only Dems and Reps
   filter(pid3 %in% c(1,2)) %>% 
+  mutate(strength_democrat = ifelse(strength_democrat == 888, NA, strength_democrat),
+         strength_republican = ifelse(strength_republican == 888, NA, strength_republican)) %>% 
+  
+  #covid expsoure variable that measures responses to covid questions
+  mutate(covid_exposure = ifelse(extra_sick_you == 1 | extra_sick_family == 1 | extra_sick_work == 1 | extra_sick_other == 1, 1, 0)) %>% 
+  
+  
   mutate(dem_concern = ifelse(pid3 == 1, covid_concern, NA),
          rep_concern = ifelse(pid3 == 2, covid_concern, NA)) %>% 
   group_by(date) %>% 
@@ -54,18 +61,22 @@ analysis <- cleaned_merged %>%
   #measures daily difference in avg partisan concern
   mutate(partisan_diff = dem_avg_concern - rep_avg_concern)
 
+#linear relationship between total cases and partisan difference
 analysis %>% 
   ggplot(aes(x = US_tot_cases, y = partisan_diff)) +
   geom_point() +
   geom_smooth(method = "lm")
 
-analysis %>% 
-  ggplot(aes(x = US_tot_cases, y = avg_concern)) +
-  geom_line()
-  
+
+
+#prop of partisan exposed to covid
+analysis %>%
+  group_by(pid3) %>% 
+  summarise(prop_exposed = sum(covid_exposure, na.rm = TRUE)/n())
+
 
 analysis %>% 
-  ggplot(aes(x = date, y = partisan_diff)) +
+  ggplot(aes(x = US_tot_cases, y = partisan_diff)) +
   geom_line()
 
 cdc_cleaned %>% 
@@ -73,7 +84,7 @@ cdc_cleaned %>%
   geom_line()
   
 
-summary(lm(partisan_diff ~ US_tot_cases, data = analysis))
+summary(lm(partisan_diff ~ US_tot_cases + , data = analysis))
 
 
 
@@ -111,5 +122,71 @@ combined_final %>%
   count(pid3)
 
 
+
+
+```
+```{r, party level trends}
+#by partisan trends
+analysis %>% 
+  ggplot(aes(x = US_tot_cases)) +
+  geom_point(aes(y = dem_avg_concern, colour = "dem_avg_concern")) + 
+  geom_point(aes(y = rep_avg_concern, colour = "rep_avg_concern"))
+
+  analysis %>% 
+    ggplot(aes(x = US_tot_cases, y = covid_concern, fill=as.factor(pid3), shape = as.factor(pid3), group = as.factor(pid3))) +
+    geom_point() +
+    geom_smooth(method = "lm")
+ 
+analysis %>% 
+  mutate(pid3 = as.factor(pid3)) %>% 
+  ggplot(aes(x = US_new_cases)) +
+  geom_point(aes(y = rep_avg_concern, colour = "rep_avg_concern", shape = "rep_avg_concern", fill = "rep_avg_concern")) + 
+  geom_point(aes(y = dem_avg_concern, colour = "dem_avg_concern", shape = "dem_avg_concern", fill = "dem_avg_concern")) 
+
+#partisan linear relationships
+summary(lm(rep_avg_concern ~ US_tot_cases, data = analysis))
+summary(lm(dem_avg_concern ~ US_tot_cases, data = analysis))
+
+```
+
+
+```{r, exposure level}
+
+#prop of partisans that were exposed to COVID
+
+analysis %>% 
+  group_by(pid3) %>% 
+  summarise(prop_exposed = sum(covid_exposure, na.rm = TRUE)/n())
+
+corr<- analysis %>% 
+  filter(!is.na(dem_concern),
+         !is.na(rep_concern),
+         !is.na(covid_exposure))
+  
+summary(lm(rep_concern ~ covid_exposure, data = analysis))
+
+
+
+```
+
+```{r, partisan strength analysis}
+#trend of level of partisanshp on concern
+subset <- analysis %>% 
+  mutate(month = format(date, "%m")) %>% 
+  
+  #partisan level variable
+  mutate(strong_partisan = case_when(
+    strength_democrat == 1 | strength_republican == 1 ~ 1,
+    strength_democrat == 2 | strength_republican == 2 ~ 0,
+    TRUE ~ 0))
+
+subset %>% 
+  group_by(month, strong_partisan) %>% 
+  summarise(avg_concern = mean(covid_concern, na.rm = TRUE))
+
+subset %>% 
+  ggplot(aes(x = date, y = avg_concern, color = strong_partisan)) +
+  facet_wrap(~pid3) +
+  geom_line()
 ```
 
