@@ -91,9 +91,17 @@ analysis %>%
 
 H1 %>% 
   ggplot(aes(x = US_tot_cases)) +
-  geom_line(aes(y = rep_avg_concern, colour = "red")) + 
-  geom_line(aes(y = dem_avg_concern, colour = "royal_blue1")) 
-
+  geom_line(aes(y = rep_avg_concern, color = "Republican")) + 
+  geom_line(aes(y = dem_avg_concern, color = "Democrat")) +
+  labs(title = "COVID-19 Concern Trends By Party",
+       x  = "Total COVID-19 Cases between 3/19/2020 - 7/02/2020",
+       y = "Average Daily COVID-19 Concern") +
+  scale_color_manual(name = "",
+  values = c("royalblue1", "red2")) +
+  scale_x_continuous(breaks = c(23975, 1177996, 1961030, 2808498),
+                     labels = c("23,000+", "1,177,000+", "1,960,000+", "2,800,000+"))
+  
+ 
 
 #MODEL 1: PARTISAN DIFF AND CASE NUMBER
 
@@ -200,26 +208,6 @@ cdc_cleaned %>%
 
 ```
 
-
-
-```{r, exposure level}
-
-#prop of partisans that were exposed to COVID
-
-analysis %>% 
-  group_by(pid3) %>% 
-  summarise(prop_exposed = sum(covid_exposure, na.rm = TRUE)/n())
-
-corr<- analysis %>% 
-  filter(!is.na(dem_concern),
-         !is.na(rep_concern),
-         !is.na(covid_exposure))
-  
-summary(lm(rep_concern ~ covid_exposure, data = analysis))
-
-
-
-```
 
 ```{r, partisan strength analysis}
 #trend of level of partisanshp on concern
