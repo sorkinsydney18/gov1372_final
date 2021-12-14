@@ -8,6 +8,9 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+devtools::install_github("rstudio/gt")
+library(gt)
+library(stargazer)
 library(tidyverse)
 
 cdc_data <- load("cdc_cleaned.RData")
@@ -51,103 +54,152 @@ analysis <- cleaned_merged %>%
   
   mutate(dem_concern = ifelse(pid3 == 1, covid_concern, NA),
          rep_concern = ifelse(pid3 == 2, covid_concern, NA)) %>% 
+  
   group_by(date) %>% 
   
   #measurement variable of covid concern
-  mutate(avg_concern = mean(covid_concern, na.rm = TRUE),
-         dem_avg_concern = mean(dem_concern, na.rm = TRUE),
+  mutate(dem_avg_concern = mean(dem_concern, na.rm = TRUE),
          rep_avg_concern = mean(rep_concern, na.rm = TRUE)) %>% 
   
   #measures daily difference in avg partisan concern
-  mutate(partisan_diff = dem_avg_concern - rep_avg_concern)
+  mutate(partisan_diff = dem_avg_concern - rep_avg_concern) %>% 
+  ungroup()
+```
 
-#linear relationship between total cases and partisan difference
+```{r, H1 analysis}
+
+
+H1 <- analysis %>% 
+  group_by(date) %>% 
+  mutate(avg_concern = mean(covid_concern, na.rm = TRUE)) %>% 
+  mutate(pid3 = as.factor(pid3))
+
+
+#FIGURE 1: linear relationship between total cases and partisan difference
 analysis %>% 
   ggplot(aes(x = US_tot_cases, y = partisan_diff)) +
   geom_point() +
-  geom_smooth(method = "lm")
+  geom_smooth(method = "lm") +
+  scale_x_continuous(breaks = c(23975, 1177996, 1961030, 2808498),
+                     labels = c("23,000+", "1,177,000+", "1,960,000+", "2,800,000+")) +
+  labs(title = "Figure 1: Difference In Partisan Concern Relative to National COVID-19 Cases",
+       x = "Total COVID-19 Cases between 3/19/2020 - 7/02/2020",
+       y = "Difference in Partisan COVID-19 Concern Level")
+
+
+#FIGURE 2: concern trends by party
+
+H1 %>% 
+  ggplot(aes(x = US_tot_cases)) +
+  geom_line(aes(y = rep_avg_concern, colour = "red")) + 
+  geom_line(aes(y = dem_avg_concern, colour = "royal_blue1")) 
+
+
+#MODEL 1: PARTISAN DIFF AND CASE NUMBER
+
+model1 <-lm(partisan_diff ~ US_tot_cases, data = analysis)
+
+cor(analysis$partisan_diff, analysis$US_tot_cases)
+
+stargazer(model1, type = "text", title = "Model 1", 
+          digits = 8, 
+          dep.var.labels = "Partisan Difference in COVID Concern",
+          covariate.labels = "US Total COVID Cases",
+          align = TRUE,
+          out = "model1.txt")
+
+#MODEL 2: REP RELATIONSHIP WITH CASE NUMBER
+
+model2 <- lm(rep_avg_concern ~ US_tot_cases, data = analysis)
+
+stargazer(model2, type = "text", title = "Model 2", 
+          digits = 8,
+          dep.var.labels = "Average Republican COVID Concern",
+          covariate.labels = "US Total COVID Cases",
+          align = TRUE,
+          out = "model2.txt")
+
+
+#MODEL 3: DEM RELATIONSHIP
+
+model3 <- lm(dem_avg_concern ~ US_tot_cases, data = analysis)
+
+stargazer(model3, type = "text", title = "Model 3", 
+          digits = 8, 
+          dep.var.labels = "Average Democrat COVID Concern",
+          covariate.labels = "US Total COVID Cases",
+          align = TRUE,
+          out = "model3.txt")
 
 
 
+```
+
+
+```{r, H2 analysis}
 #prop of partisan exposed to covid
 analysis %>%
   group_by(pid3) %>% 
   summarise(prop_exposed = sum(covid_exposure, na.rm = TRUE)/n())
 
+ ##averages of covid_concern by covid_exposure and party 
+H2 <- analysis %>% 
+  filter(!is.na(covid_exposure)) %>% 
+  group_by(pid3, covid_exposure) %>%
+  summarise(exposed_covid_concern = mean(covid_concern, na.rm = TRUE))
 
-analysis %>% 
-  ggplot(aes(x = US_tot_cases, y = partisan_diff)) +
-  geom_line()
+#manually creating table from H2
 
-cdc_cleaned %>% 
-  ggplot(aes(x = date, y = US_new_cases)) +
-  geom_line()
+H2_data <- data.frame(party = c("Democrat", "Democrat","Democrat", "Republican", "Republican", "Republican"),
+                      covid_exposure = c("Exposed", "Not Exposed", "Difference", "Exposed", "Not Exposed", "Difference"),
+                      avg_covid_concern = c(3.7, 3.6, 0.1, 3.4, 3.2, 0.2))
+
+##FIGURE 3:  Partisan averages by covid exposure
+H2_data %>% 
+  gt(rowname_col = "covid_exposure",
+     groupname_col = "party") %>% 
+   cols_label(avg_covid_concern = "Average COVID Concern") %>% 
+  tab_header(
+    title = "Figure 3:",
+    subtitle = "Effect of COVID Exposure on Average Partisan Concern Level")
   
 
-summary(lm(partisan_diff ~ US_tot_cases + , data = analysis))
+#Testing significance
+
+H2_reponly <- analysis %>% 
+  filter(pid3 == 2)
+
+#signifcance test for Republican averages
+t.test(covid_concern ~ covid_exposure, data = H2_reponly)
+
+H2_demonly <- analysis %>% 
+  filter(pid3 == 1)
+
+#signifcance test for Democrat averages
+t.test(covid_concern ~ covid_exposure, data = H2_demonly)
 
 
 
 ```
 
-```{r, test run}
-
-test <- cleaned_merged %>%
-  filter(date >= "2020-03-19" & date <= "2020-04-01") %>% 
-  filter(pid3 %in% c(1,2)) %>% 
-  mutate(dem_concern = ifelse(pid3 == 1, covid_concern, NA),
-         rep_concern = ifelse(pid3 == 2, covid_concern, NA)) %>% 
-  group_by(date) %>% 
-  mutate(avg_concern = mean(covid_concern, na.rm = TRUE),
-         dem_avg_concern = mean(dem_concern, na.rm = TRUE),
-         rep_avg_concern = mean(rep_concern, na.rm = TRUE)) %>% 
-  mutate(partisan_diff = dem_avg_concern - rep_avg_concern)
-
-
-test %>% 
-  ggplot(aes(x = date, y = avg_concern, color =  as.factor(pid3))) +
-  geom_line()
-
-
-test %>% 
-  ggplot(aes(x = date, y = partisan_diff)) +
-  geom_line()
-  
 
 
 
-```
+
+
 ```{r, analysis of data composition}
 combined_final %>% 
   count(pid3)
 
+#trends of cases by date
+cdc_cleaned %>% 
+  ggplot(aes(x = date, y = US_new_cases)) +
+  geom_line()
 
 
 
 ```
-```{r, party level trends}
-#by partisan trends
-analysis %>% 
-  ggplot(aes(x = US_tot_cases)) +
-  geom_point(aes(y = dem_avg_concern, colour = "dem_avg_concern")) + 
-  geom_point(aes(y = rep_avg_concern, colour = "rep_avg_concern"))
 
-  analysis %>% 
-    ggplot(aes(x = US_tot_cases, y = covid_concern, fill=as.factor(pid3), shape = as.factor(pid3), group = as.factor(pid3))) +
-    geom_point() +
-    geom_smooth(method = "lm")
- 
-analysis %>% 
-  mutate(pid3 = as.factor(pid3)) %>% 
-  ggplot(aes(x = US_new_cases)) +
-  geom_point(aes(y = rep_avg_concern, colour = "rep_avg_concern", shape = "rep_avg_concern", fill = "rep_avg_concern")) + 
-  geom_point(aes(y = dem_avg_concern, colour = "dem_avg_concern", shape = "dem_avg_concern", fill = "dem_avg_concern")) 
-
-#partisan linear relationships
-summary(lm(rep_avg_concern ~ US_tot_cases, data = analysis))
-summary(lm(dem_avg_concern ~ US_tot_cases, data = analysis))
-
-```
 
 
 ```{r, exposure level}
